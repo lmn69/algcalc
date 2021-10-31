@@ -62,14 +62,39 @@ namespace App
 
 	void view_left()
 	{
-		if (cursoroffset - 1 >= 0)
+		if (cursoroffset - 1 >= 0) {
 			cursoroffset--;
+			view_render(0);
+		}
 	}
 
 	void view_right()
 	{
-		if (cursoroffset + 1 <= buflength)
+		if (cursoroffset + 1 <= buflength) {
 			cursoroffset++;
+			view_render(0);
+		}
+	}
+
+	void view_delete_cursor() {
+		if (buflength == 0 || cursoroffset == 0) return;
+		for (byte i = cursoroffset; i < buflength; i++)
+		{
+			viewbuffer[i-1] = viewbuffer[i];
+		}
+		buflength--;
+		cursoroffset--;
+	}
+
+	void view_insert_cursor(char elem) {
+		if (buflength == BUFSIZE) return;
+		for (byte i = buflength; i > cursoroffset; i--)
+		{
+			viewbuffer[i] = viewbuffer[i-1];
+		}
+		viewbuffer[cursoroffset] = elem;
+		buflength++;
+		cursoroffset++;		
 	}
 
 	void init()
@@ -80,6 +105,7 @@ namespace App
 		lcd.setCursor(1, 1);
 		lcd.print(F("Adam & lemonsh"));
 		delay(2000);
+		lcd.clear();
 		lcd.cursor();
 		int terr;
 		dtostrf(te_interp("0.1+0.2", &terr), -16, 14, viewbuffer);
@@ -91,15 +117,21 @@ namespace App
 	{
 		switch (inputtype)
 		{
-		case InputType::left:
-			view_left();
-			view_render(0);
-			break;
-
-		case InputType::right:
-			view_right();
-			view_render(0);
-			break;
+		// movement
+		case InputType::left:  view_left(); break;
+		case InputType::right: view_right(); break;
+		case InputType::del:   view_delete_cursor(); break;
+		// digits
+		case InputType::d0: view_insert_cursor('0'); break;
+		case InputType::d1: view_insert_cursor('1'); break;
+		case InputType::d2: view_insert_cursor('2'); break;
+		case InputType::d3: view_insert_cursor('3'); break;
+		case InputType::d4: view_insert_cursor('4'); break;
+		case InputType::d5: view_insert_cursor('5'); break;
+		case InputType::d6: view_insert_cursor('6'); break;
+		case InputType::d7: view_insert_cursor('7'); break;
+		case InputType::d8: view_insert_cursor('8'); break;
+		case InputType::d9: view_insert_cursor('9'); break;
 		}
 	}
 }
