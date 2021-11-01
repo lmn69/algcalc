@@ -105,6 +105,11 @@ namespace App
 		render(0);
 	}
 
+	void clearmaster() {
+		buflength = 0;
+		render(0);
+	}
+
 	void calculate() {
 		int terr;
 		masterbuf[buflength] = 0;
@@ -149,12 +154,6 @@ namespace App
 	{
 		switch (inputtype)
 		{
-			// control
-			case InputType::left:  left(); break;
-			case InputType::right: right(); break;
-			case InputType::del:   delete_cursor(); break;
-			case InputType::ret:   calculate(); break;
-			// digits
 			case InputType::d0: insert_cursor('0'); break;
 			case InputType::d1: insert_cursor('1'); break;
 			case InputType::d2: insert_cursor('2'); break;
@@ -165,12 +164,19 @@ namespace App
 			case InputType::d7: insert_cursor('7'); break;
 			case InputType::d8: insert_cursor('8'); break;
 			case InputType::d9: insert_cursor('9'); break;
-			// operators
+
+			case InputType::left: left(); break;
+			case InputType::right: right(); break;
+			case InputType::del: delete_cursor(); break;
+			case InputType::ret: calculate(); break;
 			case InputType::add: insert_cursor('+'); break;
 			case InputType::sub: insert_cursor('-'); break;
 			case InputType::mul: insert_cursor('*'); break;
 			case InputType::div: insert_cursor('/'); break;
 			case InputType::dot: insert_cursor('.'); break;
+			case InputType::parbeg: insert_cursor('('); break;
+			case InputType::parend: insert_cursor(')'); break;
+			case InputType::clr: clearmaster(); break;
 		}
 	}
 }
