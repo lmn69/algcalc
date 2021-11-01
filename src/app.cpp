@@ -1,3 +1,5 @@
+// app.cpp - refer to the header file for more information
+
 #include <Wire.h>
 #include <LiquidCrystal.h>
 #include <tinyexpr.h>
@@ -18,6 +20,9 @@ double fabs(double x)
 	return u.f;
 }
 
+const static char inferr[] PROGMEM = "Undefined     ";
+const static char nanerr[] PROGMEM = "Error at %d";
+
 namespace App
 {
 	LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
@@ -32,9 +37,9 @@ namespace App
 			lcd.setCursor(0, 1);
 			lcd.print(slavebuf);
 		}
-		if (cursoroffset < viewoffset)
+		if (cursoroffset <= viewoffset)
 		{
-			viewoffset = cursoroffset;
+			viewoffset = cursoroffset - 1 >= 0 ? cursoroffset - 1 : 0;
 		}
 		else if (cursoroffset > viewoffset + 15)
 		{
@@ -85,6 +90,7 @@ namespace App
 		}
 		buflength--;
 		cursoroffset--;
+		render(0);
 	}
 
 	void insert_cursor(char elem) {
@@ -95,11 +101,11 @@ namespace App
 		}
 		masterbuf[cursoroffset] = elem;
 		buflength++;
-		cursoroffset++;		
+		cursoroffset++;
+		render(0);
 	}
 
 	void calculate() {
-		// dtostrf(te_interp("0.1+0.2", &terr), -16, 14, masterbuf);
 		int terr;
 		masterbuf[buflength] = 0;
 		if (isfirsteval) {
@@ -110,7 +116,20 @@ namespace App
 			evalout = te_eval(expr);
 			te_free(expr);
 		}
-		
+		slavebuf[0] = '=';
+		slavebuf[1] = ' ';
+		if (isnan(evalout)) {
+			cursoroffset = terr;
+			int snsize = snprintf_P(slavebuf+2, 15, nanerr, terr);
+			if (snsize < 14) {
+				memset(slavebuf+snsize+2, ' ', 14-snsize);				
+			}
+		} else if (isinf(evalout)) {
+			strcpy_P(slavebuf+2, inferr);
+		} else {
+			dtostrf(evalout, -14, 6, slavebuf+2);
+		}
+		render(1);
 	}
 
 	void init()
@@ -122,8 +141,7 @@ namespace App
 		lcd.print(F("Adam & lemonsh"));
 		delay(2000);
 		lcd.cursor();
-		slavebuf[0] = '=';
-		slavebuf[1] = ' ';
+		memset(slavebuf, ' ', 16);
 		render(1);
 	}
 
@@ -152,6 +170,7 @@ namespace App
 			case InputType::sub: insert_cursor('-'); break;
 			case InputType::mul: insert_cursor('*'); break;
 			case InputType::div: insert_cursor('/'); break;
+			case InputType::dot: insert_cursor('.'); break;
 		}
 	}
 }
