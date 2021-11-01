@@ -21,15 +21,16 @@ double fabs(double x)
 namespace App
 {
 	LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
-	char viewbuffer[BUFSIZE], pinbuffer[17];
-	byte buflength = 0, cursoroffset = 0, viewoffset = 0;
+	char masterbuf[BUFSIZE+1], slavebuf[17];
+	byte buflength = 0, cursoroffset = 0, viewoffset = 0, isfirsteval = 1;
+	double evalout;
 
-	void view_render(byte withpin)
+	void render(byte withslave)
 	{
-		if (withpin)
+		if (withslave)
 		{
 			lcd.setCursor(0, 1);
-			lcd.print(pinbuffer);
+			lcd.print(slavebuf);
 		}
 		if (cursoroffset < viewoffset)
 		{
@@ -43,7 +44,7 @@ namespace App
 		if (viewlength > 16)
 			viewlength = 16;
 		char view[17];
-		memcpy(view, viewbuffer + viewoffset, viewlength);
+		memcpy(view, masterbuf + viewoffset, viewlength);
 		byte padsize = 16 - viewlength;
 		if (padsize)
 		{
@@ -60,41 +61,56 @@ namespace App
 		lcd.setCursor(cursoroffset - viewoffset, 0);
 	}
 
-	void view_left()
+	void left()
 	{
 		if (cursoroffset - 1 >= 0) {
 			cursoroffset--;
-			view_render(0);
+			render(0);
 		}
 	}
 
-	void view_right()
+	void right()
 	{
 		if (cursoroffset + 1 <= buflength) {
 			cursoroffset++;
-			view_render(0);
+			render(0);
 		}
 	}
 
-	void view_delete_cursor() {
+	void delete_cursor() {
 		if (buflength == 0 || cursoroffset == 0) return;
 		for (byte i = cursoroffset; i < buflength; i++)
 		{
-			viewbuffer[i-1] = viewbuffer[i];
+			masterbuf[i-1] = masterbuf[i];
 		}
 		buflength--;
 		cursoroffset--;
 	}
 
-	void view_insert_cursor(char elem) {
+	void insert_cursor(char elem) {
 		if (buflength == BUFSIZE) return;
 		for (byte i = buflength; i > cursoroffset; i--)
 		{
-			viewbuffer[i] = viewbuffer[i-1];
+			masterbuf[i] = masterbuf[i-1];
 		}
-		viewbuffer[cursoroffset] = elem;
+		masterbuf[cursoroffset] = elem;
 		buflength++;
 		cursoroffset++;		
+	}
+
+	void calculate() {
+		// dtostrf(te_interp("0.1+0.2", &terr), -16, 14, masterbuf);
+		int terr;
+		masterbuf[buflength] = 0;
+		if (isfirsteval) {
+			evalout = te_interp(masterbuf, &terr);
+		} else {
+			te_variable xvar = {"x", &evalout};
+			te_expr *expr = te_compile(masterbuf, &xvar, 1, &terr);
+			evalout = te_eval(expr);
+			te_free(expr);
+		}
+		
 	}
 
 	void init()
@@ -105,33 +121,37 @@ namespace App
 		lcd.setCursor(1, 1);
 		lcd.print(F("Adam & lemonsh"));
 		delay(2000);
-		lcd.clear();
 		lcd.cursor();
-		int terr;
-		dtostrf(te_interp("0.1+0.2", &terr), -16, 14, viewbuffer);
-		buflength = strlen(viewbuffer);
-		view_render(0);
+		slavebuf[0] = '=';
+		slavebuf[1] = ' ';
+		render(1);
 	}
 
 	void input(InputType inputtype)
 	{
 		switch (inputtype)
 		{
-		// movement
-		case InputType::left:  view_left(); break;
-		case InputType::right: view_right(); break;
-		case InputType::del:   view_delete_cursor(); break;
-		// digits
-		case InputType::d0: view_insert_cursor('0'); break;
-		case InputType::d1: view_insert_cursor('1'); break;
-		case InputType::d2: view_insert_cursor('2'); break;
-		case InputType::d3: view_insert_cursor('3'); break;
-		case InputType::d4: view_insert_cursor('4'); break;
-		case InputType::d5: view_insert_cursor('5'); break;
-		case InputType::d6: view_insert_cursor('6'); break;
-		case InputType::d7: view_insert_cursor('7'); break;
-		case InputType::d8: view_insert_cursor('8'); break;
-		case InputType::d9: view_insert_cursor('9'); break;
+			// control
+			case InputType::left:  left(); break;
+			case InputType::right: right(); break;
+			case InputType::del:   delete_cursor(); break;
+			case InputType::ret:   calculate(); break;
+			// digits
+			case InputType::d0: insert_cursor('0'); break;
+			case InputType::d1: insert_cursor('1'); break;
+			case InputType::d2: insert_cursor('2'); break;
+			case InputType::d3: insert_cursor('3'); break;
+			case InputType::d4: insert_cursor('4'); break;
+			case InputType::d5: insert_cursor('5'); break;
+			case InputType::d6: insert_cursor('6'); break;
+			case InputType::d7: insert_cursor('7'); break;
+			case InputType::d8: insert_cursor('8'); break;
+			case InputType::d9: insert_cursor('9'); break;
+			// operators
+			case InputType::add: insert_cursor('+'); break;
+			case InputType::sub: insert_cursor('-'); break;
+			case InputType::mul: insert_cursor('*'); break;
+			case InputType::div: insert_cursor('/'); break;
 		}
 	}
 }
